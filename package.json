@@ -1,0 +1,29 @@
+{
+  "name": "recommendation-engine",
+  "version": "0.1.0",
+  "description": "Standalone recommendation service for the Lusaka listings platform",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.1.0",
+    "lru-cache": "^10.4.3",
+    "node-cron": "^3.0.3",
+    "pino-pretty": "^11.2.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.14.15",
+    "@types/node-cron": "^3.0.11",
+    "tsx": "^4.16.5",
+    "typescript": "^5.5.4"
+  }
+}
