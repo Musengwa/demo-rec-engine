@@ -12,3 +12,11 @@ export async function getUserLocation(userId: string): Promise<string | null> {
   if (error) throw error;
   return data?.location ?? null;
 }
+
+/** Every profile id — the eligible-user set for the daily new-listing notification job. */
+export async function getAllProfileIds(): Promise<string[]> {
+  const { data, error } = await supabase.from("profiles").select("id");
+
+  if (error) throw error;
+  return (data ?? []).map((row) => row.id);
+}

@@ -17,9 +17,34 @@ export interface ListingCard {
     lat: number | null;
     lng: number | null;
   } | null;
+  venueId: string | null;
+  venueName: string | null;
   tags: string[];
   categories: string[];
   score?: number; // present on scored results (feed/explore/similar), omitted for plain lists
+}
+
+export interface VenueSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  location: {
+    city: string | null;
+    country: string | null;
+    lat: number | null;
+    lng: number | null;
+  } | null;
+}
+
+export interface VenueListingsResponse {
+  venue: VenueSummary;
+  source: "personalized" | "cold_start";
+  items: ListingCard[];
+  nextCursor: string | null;
+}
+
+export interface SimilarVenuesResponse {
+  venues: VenueSummary[];
 }
 
 export interface FeedResponse {

@@ -28,6 +28,16 @@ function tagSimilarity(a: ListingCard, b: ListingCard): number {
 }
 
 /**
+ * Combined similarity for MMR: tag overlap, plus a same-venue signal so
+ * results don't cluster on one venue (e.g. several rooms at the same hotel)
+ * even when their tags don't overlap much.
+ */
+function combinedSimilarity(a: ListingCard, b: ListingCard): number {
+  const sameVenue = Boolean(a.venueId) && a.venueId === b.venueId;
+  return Math.max(tagSimilarity(a, b), sameVenue ? config.scoring.venueSimilarityWeight : 0);
+}
+
+/**
  * Maximal Marginal Relevance re-ranking: greedily picks items that are both
  * relevant (base score) and dissimilar to what's already been picked, so
  * the final list doesn't collapse into ten near-identical listings.
@@ -43,7 +53,7 @@ function mmrRerank(items: ListingCard[], lambda: number, limit: number): Listing
 
     for (let i = 0; i < remaining.length; i++) {
       const relevance = remaining[i].score ?? 0;
-      const maxSim = selected.length === 0 ? 0 : Math.max(...selected.map((s) => tagSimilarity(remaining[i], s)));
+      const maxSim = selected.length === 0 ? 0 : Math.max(...selected.map((s) => combinedSimilarity(remaining[i], s)));
       const value = lambda * relevance - (1 - lambda) * maxSim;
       if (value > bestValue) {
         bestValue = value;

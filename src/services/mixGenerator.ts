@@ -3,6 +3,7 @@ import { getCandidatePool } from "../data/listings";
 import { countUserInteractions, getUserInteractions } from "../data/interactions";
 import { getUserTagAffinity } from "../data/tags";
 import { getColdStartListings } from "./coldStart";
+import { capPerVenue } from "./diversity";
 import { Mix, MixesResponse, ListingCard } from "../types";
 
 function slugify(text: string): string {
@@ -47,7 +48,8 @@ export async function buildMixes(userId: string | null): Promise<MixesResponse> 
 
   const mixes: Mix[] = topTags
     .map((tag) => {
-      const items = pool.filter((item) => item.tags.includes(tag)).slice(0, ITEMS_PER_MIX);
+      const matching = pool.filter((item) => item.tags.includes(tag));
+      const items = capPerVenue(matching, ITEMS_PER_MIX, config.scoring.maxPerVenueMix);
       if (items.length === 0) return null;
       return {
         id: slugify(tag),

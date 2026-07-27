@@ -1,29 +1,47 @@
 import { supabase } from "../lib/supabaseClient";
 import { ListingCard, ListingType } from "../types";
 
-// Raw shape returned by the enrichment query below, before mapping to ListingCard.
+// A listing's location is no longer a direct FK — it hangs off the listing's
+// venue instead: listings.venue_id -> venues.id -> venues.location_id -> locations.id.
+// venues.location_id is nullable, so a venue (and therefore its listings) can
+// legitimately have no resolved location.
+const LISTING_SELECT = `
+  id, title, listing_type, price, is_active,
+  venues ( id, name, locations ( city, country, lat, lng ) ),
+  tag_listings ( tags ( name ) ),
+  category_listings ( categories ( name ) )
+`;
+
+// Raw shape returned by the enrichment query above, before mapping to ListingCard.
 interface ListingRow {
   id: string;
   title: string;
   listing_type: ListingType;
   price: number | null;
   is_active: boolean;
-  locations: { city: string | null; country: string | null; lat: number | null; lng: number | null } | null;
+  venues: {
+    id: string;
+    name: string;
+    locations: { city: string | null; country: string | null; lat: number | null; lng: number | null } | null;
+  } | null;
   images: { image_url: string }[];
   tag_listings: { tags: { name: string } }[];
   category_listings: { categories: { name: string } }[];
 }
 
 function mapRow(row: ListingRow, score?: number): ListingCard {
+  const venueLocation = row.venues?.locations ?? null;
   return {
     id: row.id,
     title: row.title,
     listingType: row.listing_type,
     price: row.price,
     coverImageUrl: row.images?.[0]?.image_url ?? null,
-    location: row.locations
-      ? { city: row.locations.city, country: row.locations.country, lat: row.locations.lat, lng: row.locations.lng }
+    location: venueLocation
+      ? { city: venueLocation.city, country: venueLocation.country, lat: venueLocation.lat, lng: venueLocation.lng }
       : null,
+    venueId: row.venues?.id ?? null,
+    venueName: row.venues?.name ?? null,
     tags: (row.tag_listings ?? []).map((t) => t.tags.name),
     categories: (row.category_listings ?? []).map((c) => c.categories.name),
     ...(score !== undefined ? { score } : {}),
@@ -50,14 +68,7 @@ export async function getListingsByIds(ids: string[]): Promise<ListingCard[]> {
   // attach the correct image table per row.
   const { data: baseRows, error } = await supabase
     .from("listings")
-    .select(
-      `
-      id, title, listing_type, price, is_active,
-      locations ( city, country, lat, lng ),
-      tag_listings ( tags ( name ) ),
-      category_listings ( categories ( name ) )
-    `
-    )
+    .select(LISTING_SELECT)
     .in("id", ids)
     .eq("is_active", true);
 
@@ -103,20 +114,27 @@ export async function getListingsByIds(ids: string[]): Promise<ListingCard[]> {
  * scorers rank. `limit` here is the pool size, not the final page size —
  * scorers pull a larger pool than they return so ranking has something to
  * work with.
+ *
+ * `venueId`, when passed, scopes the pool to a single venue — used by the
+ * venue-page scorer.
  */
-export async function getCandidatePool(excludeIds: string[], poolLimit: number): Promise<ListingCard[]> {
+export async function getCandidatePool(
+  excludeIds: string[],
+  poolLimit: number,
+  venueId?: string
+): Promise<ListingCard[]> {
+  // newest-first: gives every pool a deterministic order, and lets cold-start
+  // callers (e.g. the venue page for guests) just take the pool as-is.
   let query = supabase
     .from("listings")
-    .select(
-      `
-      id, title, listing_type, price, is_active,
-      locations ( city, country, lat, lng ),
-      tag_listings ( tags ( name ) ),
-      category_listings ( categories ( name ) )
-    `
-    )
+    .select(LISTING_SELECT)
     .eq("is_active", true)
+    .order("created_at", { ascending: false })
     .limit(poolLimit);
+
+  if (venueId) {
+    query = query.eq("venue_id", venueId);
+  }
 
   if (excludeIds.length > 0) {
     query = query.not("id", "in", `(${excludeIds.join(",")})`);

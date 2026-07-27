@@ -5,6 +5,7 @@ import { getUserTagAffinity, getUserCategoryAffinity, getMostRecentPositiveListi
 import { getUserLocation } from "../data/profiles";
 import { getTopPairPartners } from "../data/pairAffinity";
 import { getColdStartListings } from "./coldStart";
+import { capPerVenue } from "./diversity";
 import { ListingCard, FeedResponse } from "../types";
 
 function normalize(map: Map<string, number>): Map<string, number> {
@@ -74,5 +75,6 @@ export async function buildFeed(userId: string, limit: number): Promise<FeedResp
 
   scored.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
-  return { source: "personalized", items: scored.slice(0, limit), nextCursor: null };
+  const items = capPerVenue(scored, limit, config.scoring.maxPerVenueFeed);
+  return { source: "personalized", items, nextCursor: null };
 }

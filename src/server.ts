@@ -5,7 +5,10 @@ import { exploreRoute } from "./routes/explore";
 import { mixesRoute } from "./routes/mixes";
 import { similarRoute } from "./routes/similar";
 import { interactionsRoute } from "./routes/interactions";
+import { venuesRoute } from "./routes/venues";
+import { pushTokensRoute } from "./routes/pushTokens";
 import { scheduleJobs } from "./jobs/refreshPairAffinity";
+import { scheduleNotificationJob } from "./jobs/notifyNewListings";
 import { resolveAuthContext } from "./middleware/auth";
 
 async function main() {
@@ -47,8 +50,11 @@ async function main() {
   await app.register(mixesRoute);
   await app.register(similarRoute);
   await app.register(interactionsRoute);
+  await app.register(venuesRoute);
+  await app.register(pushTokensRoute);
 
   scheduleJobs(app.log);
+  scheduleNotificationJob(app.log);
 
   await app.listen({ port: config.server.port, host: "0.0.0.0" });
   app.log.info(`Recommendation engine listening on port ${config.server.port}`);

@@ -54,6 +54,21 @@ export const config = {
     // explore page: how strongly to penalize similarity to what the user
     // already engages with (MMR-style diversity re-ranking), 0-1
     exploreDiversityLambda: 0.55,
+    // venue anti-clustering: cap on how many results from the same venue can
+    // appear in one Feed page / one Mix
+    maxPerVenueFeed: 3,
+    maxPerVenueMix: 2,
+    // how strongly "same venue" counts as similarity in Explore's MMR term,
+    // alongside tag-based similarity (0-1)
+    venueSimilarityWeight: 0.9,
+  },
+
+  notifications: {
+    cron: "0 8 * * *", // 8am daily, after the 3am pair-affinity refresh
+    maxNewListingNotificationsPerUser: 5,
+    // window used only when no listing_match notification has ever been sent,
+    // so the very first run doesn't sweep in the platform's entire history
+    newListingFallbackWindowHours: 24,
   },
 
   listingRequirements: {
